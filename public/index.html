@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Snake Game</title>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background-color: #333;
+            color: #fff;
+        }
+        canvas {
+            border: 1px solid #fff;
+            background-color: #000;
+        }
+        .overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            display: none;
+        }
+        .overlay input {
+            margin: 10px;
+            padding: 10px;
+            font-size: 16px;
+        }
+        .overlay button {
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="game" width="400" height="400"></canvas>
+    <div class="overlay" id="gameOverOverlay">
+        <h1>Game Over</h1>
+        <p>Your score: <span id="finalScore"></span></p>
+        <input type="text" id="playerName" placeholder="Enter your name">
+        <button onclick="saveScore()">Save</button>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('game');
+        const ctx = canvas.getContext('2d');
+        const overlay = document.getElementById('gameOverOverlay');
+        const finalScore = document.getElementById('finalScore');
+        const playerNameInput = document.getElementById('playerName');
+
+        let snake = [{ x: 200, y: 200 }];
+        let direction = { x: 0, y: 0 };
+        let food = { x: Math.floor(Math.random() * 20) * 20, y: Math.floor(Math.random() * 20) * 20 };
+        let score = 0;
+
+        function drawRect(x, y, color) {
+            ctx.fillStyle = color;
+            ctx.fillRect(x, y, 20, 20);
+        }
+
+        function gameLoop() {
+            if (direction.x !== 0 || direction.y !== 0) {
+                const head = { x: snake[0].x + direction.x * 20, y: snake[0].y + direction.y * 20 };
+
+                // Check collisions
+                if (
+                    head.x < 0 || head.x >= canvas.width ||
+                    head.y < 0 || head.y >= canvas.height ||
+                    snake.some(segment => segment.x === head.x && segment.y === head.y)
+                ) {
+                    gameOver();
+                    return;
+                }
+
+                // Check food collision
+                if (head.x === food.x && head.y === food.y) {
+                    score += 10;
+                    food = { x: Math.floor(Math.random() * 20) * 20, y: Math.floor(Math.random() * 20) * 20 };
+                } else {
+                    snake.pop();
+                }
+
+                snake.unshift(head);
+            }
+
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            drawRect(food.x, food.y, 'red');
+            snake.forEach(segment => drawRect(segment.x, segment.y, 'lime'));
+        }
+
+        function gameOver() {
+            clearInterval(gameInterval);
+            finalScore.textContent = score;
+            overlay.style.display = 'flex';
+        }
+
+        function saveScore() {
+            const playerName = playerNameInput.value;
+            if (!playerName) {
+                alert('Please enter your name!');
+                return;
+            }
+
+            fetch('/save-score', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name: playerName, score: score })
+            })
+            .then(response => {
+                if (response.ok) {
+                    alert('Score saved successfully!');
+                    location.reload();
+                } else {
+                    alert('Failed to save score.');
+                }
+            })
+            .catch(err => alert('Error saving score: ' + err));
+        }
+
+        document.addEventListener('keydown', e => {
+            switch (e.key) {
+                case 'ArrowUp':
+                    if (direction.y === 0) direction = { x: 0, y: -1 };
+                    break;
+                case 'ArrowDown':
+                    if (direction.y === 0) direction = { x: 0, y: 1 };
+                    break;
+                case 'ArrowLeft':
+                    if (direction.x === 0) direction = { x: -1, y: 0 };
+                    break;
+                case 'ArrowRight':
+                    if (direction.x === 0) direction = { x: 1, y: 0 };
+                    break;
+            }
+        });
+
+        const gameInterval = setInterval(gameLoop, 100);
+    </script>
+
+<div class="scores">
+    <h2>Top Scores</h2>
+    <table id="scoresTable">
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Score</th>
+            </tr>
+        </thead>
+        <tbody>
+            <!-- Scores will be inserted here -->
+        </tbody>
+    </table>
+    <button onclick="refreshScores()">Refresh Scores</button>
+</div>
+<script>
+    async function refreshScores() {
+        try {
+            const response = await fetch('/scores');
+            const scores = await response.json();
+
+            const tableBody = document.getElementById('scoresTable').querySelector('tbody');
+            tableBody.innerHTML = '';
+
+            scores.forEach(score => {
+                const row = document.createElement('tr');
+                row.innerHTML = `<td>${score.name}</td><td>${score.score}</td>`;
+                tableBody.appendChild(row);
+            });
+        } catch (error) {
+            console.error('Error fetching scores:', error);
+        }
+    }
+
+    // Load scores on page load
+    refreshScores();
+</script>
+
+</body>
+</html>
