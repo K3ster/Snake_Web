@@ -69,6 +69,9 @@
                 width: 100%;
                 max-width: 400px;
             }
+            th {
+            cursor: pointer;
+        }
         </style>
     </head>
     <body>
@@ -190,8 +193,8 @@
     <table id="scoresTable">
         <thead>
             <tr>
-                <th>Name</th>
-                <th>Score</th>
+                <th onclick="sortTable(0)">Name</th>
+                <th onclick="sortTable(1)">Score</th>
             </tr>
         </thead>
         <tbody>
@@ -273,6 +276,44 @@
 
     // Load scores on page load
     refreshScores();
+
+    function sortTable(columnIndex) {
+            const table = document.getElementById("scoresTable");
+            let rows, switching, i, x, y, shouldSwitch, direction, switchcount = 0;
+            switching = true;
+            direction = "asc"; 
+
+            while (switching) {
+                switching = false;
+                rows = table.rows;
+                for (i = 1; i < (rows.length - 1); i++) {
+                    shouldSwitch = false;
+                    x = rows[i].getElementsByTagName("TD")[columnIndex];
+                    y = rows[i + 1].getElementsByTagName("TD")[columnIndex];
+                    if (direction === "asc") {
+                        if (x.innerHTML.toLowerCase() > y.innerHTML.toLowerCase()) {
+                            shouldSwitch = true;
+                            break;
+                        }
+                    } else if (direction === "desc") {
+                        if (x.innerHTML.toLowerCase() < y.innerHTML.toLowerCase()) {
+                            shouldSwitch = true;
+                            break;
+                        }
+                    }
+                }
+                if (shouldSwitch) {
+                    rows[i].parentNode.insertBefore(rows[i + 1], rows[i]);
+                    switching = true;
+                    switchcount ++; 
+                } else {
+                    if (switchcount === 0 && direction === "asc") {
+                        direction = "desc";
+                        switching = true;
+                    }
+                }
+            }
+        }
     </script>
 </body>
 </html>

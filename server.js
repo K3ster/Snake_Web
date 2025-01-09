@@ -50,15 +50,38 @@ app.post('/save-score', (req, res) => {
         return res.status(400).json({ error: 'Name and score are required.' });
     }
 
-    const query = `INSERT INTO scores (name, score) VALUES (?, ?)`;
-    db.run(query, [name, score], function (err) {
+    // Check if the score already exists for the given name
+    const checkQuery = `SELECT id FROM scores WHERE name = ? AND score = ?`;
+    db.get(checkQuery, [name, score], (err, row) => {
         if (err) {
-            console.error('Error saving score:', err);
-            return res.status(500).json({ error: 'Failed to save score.' });
+            console.error('Error checking existing score:', err);
+            return res.status(500).json({ error: 'Database error.' });
         }
-        res.status(200).json({ message: 'Score saved successfully!', id: this.lastID });
+
+        if (row) {
+            // If a record exists, update it
+            const updateQuery = `UPDATE scores SET score = ? WHERE id = ?`;
+            db.run(updateQuery, [score, row.id], (updateErr) => {
+                if (updateErr) {
+                    console.error('Error updating score:', updateErr);
+                    return res.status(500).json({ error: 'Failed to update score.' });
+                }
+                res.status(200).json({ message: 'Score updated successfully!' });
+            });
+        } else {
+            // If no record exists, insert a new one
+            const insertQuery = `INSERT INTO scores (name, score) VALUES (?, ?)`;
+            db.run(insertQuery, [name, score], function (insertErr) {
+                if (insertErr) {
+                    console.error('Error inserting score:', insertErr);
+                    return res.status(500).json({ error: 'Failed to save score.' });
+                }
+                res.status(200).json({ message: 'Score saved successfully!', id: this.lastID });
+            });
+        }
     });
 });
+
 
 // Get scores endpoint
 app.get('/scores', (req, res) => {
