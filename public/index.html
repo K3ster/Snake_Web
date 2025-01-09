@@ -1,59 +1,94 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Snake Game</title>
-    <link rel="stylesheet" href="styles.css">
-    <style>
-        body {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            margin: 0;
-            font-family: Arial, sans-serif;
-            background-color: #333;
-            color: #fff;
-        }
-        canvas {
-            border: 1px solid #fff;
-            background-color: #000;
-        }
-        .overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.8);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            flex-direction: column;
-            display: none;
-        }
-        .overlay input {
-            margin: 10px;
-            padding: 10px;
-            font-size: 16px;
-        }
-        .overlay button {
-            padding: 10px 20px;
-            font-size: 16px;
-            cursor: pointer;
-        }
-    </style>
-</head>
-<body>
-    <canvas id="game" width="400" height="400"></canvas>
-    <div class="overlay" id="gameOverOverlay">
-        <h1>Game Over</h1>
-        <p>Your score: <span id="finalScore"></span></p>
-        <input type="text" id="playerName" placeholder="Enter your name">
-        <button onclick="saveScore()">Save</button>
-    </div>
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Snake Game</title>
+        <link rel="stylesheet" href="styles.css">
+        <style>
+            body {
+                display: flex;
 
+                align-items: center;
+                height: 100vh;
+                margin: 0;
+                font-family: Arial, sans-serif;
+                background-color: #333;
+                color: #fff;
+            }
+            .container {
+                display: flex;
+                align-items: center;
+                flex-direction: column;
+                justify-content: space-between;
+                align-items: flex-start;
+                width: 100%;
+                max-width: 400px;
+                margin-left: 30%;
+            }
+            .game-container {
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                flex: 2;
+            }
+            canvas {
+                border: 1px solid #fff;
+                background-color: #000;
+                margin-bottom: 20px;
+            }
+            .scores {
+                flex: 1;
+                padding: 20px;
+                background-color: #444;
+                border-radius: 8px;
+            }
+            .chat {
+                width: 100%;
+                margin-top: 20px;
+                padding: 10px;
+                background-color: #444;
+                border-radius: 8px;
+            }
+            .overlay {
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background: rgba(0, 0, 0, 0.8);
+                display: none;
+                justify-content: center;
+                align-items: center;
+                flex-direction: column;
+            }
+            .scores {
+                display: flex;
+                flex-direction: column;
+                align-items: start;
+                width: 100%;
+                max-width: 400px;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <div class="game-container">
+                <canvas id="game" width="400" height="400"></canvas>
+                <div class="overlay" id="gameOverOverlay">
+                    <h1>Game Over</h1>
+                    <p>Your score: <span id="finalScore"></span></p>
+                    <input type="text" id="playerName" placeholder="Enter your name">
+                    <button onclick="saveScore()">Save</button>
+                </div>
+                <div class="chat">
+                    <h2>Chat</h2>
+                    <input type="text" id="nick" placeholder="Enter your nick">
+                    <div id="messages"></div>
+                    <input type="text" id="chatInput" placeholder="Type a message">
+                    <button id="sendButton">Send</button>
+                </div>
+            </div>
     <script>
         const canvas = document.getElementById('game');
         const ctx = canvas.getContext('2d');
@@ -149,7 +184,7 @@
 
         const gameInterval = setInterval(gameLoop, 100);
     </script>
-
+</div>
 <div class="scores">
     <h2>Top Scores</h2>
     <table id="scoresTable">
@@ -165,6 +200,7 @@
     </table>
     <button onclick="refreshScores()">Refresh Scores</button>
 </div>
+
 <script>
     async function refreshScores() {
         try {
@@ -188,5 +224,55 @@
     refreshScores();
 </script>
 
+
+<script src="/socket.io/socket.io.js"></script>
+<script>
+    const socket = io();
+
+    // Chat logic
+    const messagesDiv = document.getElementById('messages');
+    const chatInput = document.getElementById('chatInput');
+    const sendButton = document.getElementById('sendButton');
+    const nickInput = document.getElementById('nick');
+
+    // Send a message
+    sendButton.addEventListener('click', () => {
+        const message = chatInput.value;
+        const nick = nickInput.value || 'Anonymous';
+        if (message) {
+            socket.emit('chat message', { nick, message });
+            chatInput.value = '';
+        }
+    });
+
+    // Receive a message
+    socket.on('chat message', ({ nick, message }) => {
+        const msgElement = document.createElement('p');
+        msgElement.textContent = `${nick}: ${message}`;
+        messagesDiv.appendChild(msgElement);
+    });
+
+    // Scores functionality
+    async function refreshScores() {
+        try {
+            const response = await fetch('/scores');
+            const scores = await response.json();
+
+            const tableBody = document.getElementById('scoresTable').querySelector('tbody');
+            tableBody.innerHTML = '';
+
+            scores.forEach(score => {
+                const row = document.createElement('tr');
+                row.innerHTML = `<td>${score.name}</td><td>${score.score}</td>`;
+                tableBody.appendChild(row);
+            });
+        } catch (error) {
+            console.error('Error fetching scores:', error);
+        }
+    }
+
+    // Load scores on page load
+    refreshScores();
+    </script>
 </body>
 </html>

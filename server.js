@@ -1,8 +1,12 @@
 const express = require('express');
 const sqlite3 = require('sqlite3').verbose();
 const bodyParser = require('body-parser');
+const http = require('http');
+const { Server } = require('socket.io');
 
 const app = express();
+const server = http.createServer(app);
+const io = new Server(server);
 const PORT = 3000;
 
 // Middleware
@@ -23,6 +27,21 @@ const db = new sqlite3.Database('./scores.db', (err) => {
     }
 });
 
+// Socket.IO – Chat functionality
+io.on('connection', (socket) => {
+    console.log('A user connected');
+
+    // Handle incoming messages
+    socket.on('chat message', ({ nick, message }) => {
+        console.log(`${nick}: ${message}`);
+        io.emit('chat message', { nick, message }); // Broadcast to all connected users
+    });
+
+    socket.on('disconnect', () => {
+        console.log('A user disconnected');
+    });
+});
+
 // Save score endpoint
 app.post('/save-score', (req, res) => {
     const { name, score } = req.body;
@@ -41,7 +60,7 @@ app.post('/save-score', (req, res) => {
     });
 });
 
-// Get scores endpoint (optional, to view scores)
+// Get scores endpoint
 app.get('/scores', (req, res) => {
     const query = `SELECT * FROM scores ORDER BY score DESC LIMIT 10`;
     db.all(query, [], (err, rows) => {
@@ -53,9 +72,12 @@ app.get('/scores', (req, res) => {
     });
 });
 
-
+// Serve the HTML
+app.get('/', (req, res) => {
+    res.sendFile(__dirname + '/public/index.html');
+});
 
 // Start server
-app.listen(PORT, () => {
+server.listen(PORT, () => {
     console.log(`Server running on http://localhost:${PORT}`);
 });
