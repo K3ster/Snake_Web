@@ -1,319 +1,447 @@
 <!DOCTYPE html>
 <html lang="en">
-    <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Snake Game</title>
-        <link rel="stylesheet" href="styles.css">
-        <style>
-            body {
-                display: flex;
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Snake Game with Authentication</title>
+  <link rel="stylesheet" href="styles.css" />
+  <style>
+    /* Ogólne style dla całego body */
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background-color: #333;
+      color: #fff;
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: flex-start; /* żeby strona zaczynała się od góry */
+    }
 
-                align-items: center;
-                height: 100vh;
-                margin: 0;
-                font-family: Arial, sans-serif;
-                background-color: #333;
-                color: #fff;
-            }
-            .container {
-                display: flex;
-                align-items: center;
-                flex-direction: column;
-                justify-content: space-between;
-                align-items: flex-start;
-                width: 100%;
-                max-width: 400px;
-                margin-left: 30%;
-            }
-            .game-container {
-                display: flex;
-                flex-direction: column;
-                align-items: center;
-                flex: 2;
-            }
-            canvas {
-                border: 1px solid #fff;
-                background-color: #000;
-                margin-bottom: 20px;
-            }
-            .scores {
-                flex: 1;
-                padding: 20px;
-                background-color: #444;
-                border-radius: 8px;
-            }
-            .chat {
-                width: 100%;
-                margin-top: 20px;
-                padding: 10px;
-                background-color: #444;
-                border-radius: 8px;
-            }
-            .overlay {
-                position: fixed;
-                top: 0;
-                left: 0;
-                width: 100%;
-                height: 100%;
-                background: rgba(0, 0, 0, 0.8);
-                display: none;
-                justify-content: center;
-                align-items: center;
-                flex-direction: column;
-            }
-            .scores {
-                display: flex;
-                flex-direction: column;
-                align-items: start;
-                width: 100%;
-                max-width: 400px;
-            }
-            th {
-            cursor: pointer;
+    /* Kontener główny, dzięki któremu wycentrujemy zawartość */
+    .container {
+      width: 100%;
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 20px;
+      box-sizing: border-box;
+    }
+
+    /* Sekcja logowania i rejestracji */
+    #authContainer {
+      display: flex;
+      flex-direction: column;
+      max-width: 400px;
+      margin: 0 auto;
+    }
+
+    .auth-form {
+      background-color: #444;
+      padding: 20px;
+      margin-bottom: 20px;
+      border-radius: 8px;
+    }
+
+    .auth-form input {
+      display: block;
+      width: 100%;
+      margin-bottom: 10px;
+      padding: 8px;
+      border: none;
+      border-radius: 4px;
+    }
+
+    .auth-form button {
+      padding: 10px;
+      border: none;
+      border-radius: 4px;
+      background-color: #666;
+      color: #fff;
+      cursor: pointer;
+    }
+
+    /* Kontener gry i podział na lewą/prawą kolumnę */
+    #gameContainer {
+      display: none; /* Na start ukryty; pojawia się po zalogowaniu */
+    }
+
+    .game-layout {
+      display: flex;
+      flex-direction: row;
+      align-items: flex-start;  /* wyrównanie do góry */
+      gap: 20px;                /* odstęp między kolumnami */
+      margin-top: 20px;
+    }
+
+    /* Kolumna lewa (gra + chat) */
+    .left-column {
+      flex: 1; /* zajmie resztę dostępnego miejsca */
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    canvas {
+      border: 1px solid #fff;
+      background-color: #000;
+      margin-bottom: 20px;
+    }
+
+    .chat {
+      width: 100%;
+      padding: 10px;
+      background-color: #444;
+      border-radius: 8px;
+    }
+
+    /* Kolumna prawa (wyniki) */
+    .right-column {
+      width: 300px; /* stała szerokość dla wyników */
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+    }
+
+    .scores {
+      width: 100%;
+      background-color: #444;
+      border-radius: 8px;
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+
+    /* Overlay game over */
+    .overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.8);
+      display: none;
+      justify-content: center;
+      align-items: center;
+      flex-direction: column;
+    }
+
+    /* Dodatkowe klikane nagłówki tabeli (jeśli chcesz sortować) */
+    th {
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <!-- Login and Registration Section -->
+    <div id="authContainer">
+      <div id="loginForm" class="auth-form">
+        <h2>Login</h2>
+        <input type="text" id="loginUsername" placeholder="Username" required />
+        <input type="password" id="loginPassword" placeholder="Password" required />
+        <button onclick="login()">Login</button>
+        <p>
+          Don't have an account?
+          <a href="#" onclick="toggleAuthForm('registerForm')">Register</a>
+        </p>
+      </div>
+      <div id="registerForm" class="auth-form" style="display: none;">
+        <h2>Register</h2>
+        <input type="text" id="registerUsername" placeholder="Username" required />
+        <input type="password" id="registerPassword" placeholder="Password" required />
+        <button onclick="register()">Register</button>
+        <p>
+          Already have an account?
+          <a href="#" onclick="toggleAuthForm('loginForm')">Login</a>
+        </p>
+      </div>
+    </div>
+
+    <!-- Game Section -->
+    <div id="gameContainer">
+      <h1>Snake Game</h1>
+      <div class="game-layout">
+        <!-- Lewa kolumna: gra + chat -->
+        <div class="left-column">
+          <canvas id="game" width="400" height="400"></canvas>
+
+          <!-- Overlay Game Over -->
+          <div class="overlay" id="gameOverOverlay" style="display: none;">
+            <h1>Game Over</h1>
+            <p>Your score: <span id="finalScore"></span></p>
+            <button onclick="restartGame()">Restart</button>
+          </div>
+
+          <!-- Chat -->
+          <div class="chat">
+            <h2>Chat</h2>
+            <div id="messages"></div>
+            <input type="text" id="chatInput" placeholder="Type a message" />
+            <button id="sendButton">Send</button>
+          </div>
+        </div>
+
+        <!-- Prawa kolumna: wyniki -->
+        <div class="right-column">
+          <div class="scores">
+            <h2>Top Scores</h2>
+            <table id="scoresTable">
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Score</th>
+                </tr>
+              </thead>
+              <tbody>
+                <!-- Scores will be dynamically inserted -->
+              </tbody>
+            </table>
+            <button onclick="refreshScores()">Refresh Scores</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- socket.io -->
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    const socket = io();
+    let username = '';
+
+    async function checkLogin() {
+      try {
+        const response = await fetch('/check-login', { method: 'GET', credentials: 'include' });
+        if (response.ok) {
+          const data = await response.json();
+          username = data.username;
+          document.getElementById('authContainer').style.display = 'none';
+          document.getElementById('gameContainer').style.display = 'block';
+          refreshScores();
+          startGame();
+        } else {
+          document.getElementById('authContainer').style.display = 'block';
+          document.getElementById('gameContainer').style.display = 'none';
         }
-        </style>
-    </head>
-    <body>
-        <div class="container">
-            <div class="game-container">
-                <canvas id="game" width="400" height="400"></canvas>
-                <div class="overlay" id="gameOverOverlay">
-                    <h1>Game Over</h1>
-                    <p>Your score: <span id="finalScore"></span></p>
-                    <input type="text" id="playerName" placeholder="Enter your name">
-                    <button onclick="saveScore()">Save</button>
-                </div>
-                <div class="chat">
-                    <h2>Chat</h2>
-                    <input type="text" id="nick" placeholder="Enter your nick">
-                    <div id="messages"></div>
-                    <input type="text" id="chatInput" placeholder="Type a message">
-                    <button id="sendButton">Send</button>
-                </div>
-            </div>
-    <script>
-        const canvas = document.getElementById('game');
-        const ctx = canvas.getContext('2d');
-        const overlay = document.getElementById('gameOverOverlay');
-        const finalScore = document.getElementById('finalScore');
-        const playerNameInput = document.getElementById('playerName');
+      } catch (error) {
+        console.error('Error checking login:', error);
+      }
+    }
 
-        let snake = [{ x: 200, y: 200 }];
-        let direction = { x: 0, y: 0 };
-        let food = { x: Math.floor(Math.random() * 20) * 20, y: Math.floor(Math.random() * 20) * 20 };
-        let score = 0;
+    async function login() {
+      const usernameInput = document.getElementById('loginUsername').value;
+      const passwordInput = document.getElementById('loginPassword').value;
 
-        function drawRect(x, y, color) {
-            ctx.fillStyle = color;
-            ctx.fillRect(x, y, 20, 20);
-        }
+      if (!usernameInput || !passwordInput) {
+        alert('Please fill in all fields.');
+        return;
+      }
 
-        function gameLoop() {
-            if (direction.x !== 0 || direction.y !== 0) {
-                const head = { x: snake[0].x + direction.x * 20, y: snake[0].y + direction.y * 20 };
-
-                // Check collisions
-                if (
-                    head.x < 0 || head.x >= canvas.width ||
-                    head.y < 0 || head.y >= canvas.height ||
-                    snake.some(segment => segment.x === head.x && segment.y === head.y)
-                ) {
-                    gameOver();
-                    return;
-                }
-
-                // Check food collision
-                if (head.x === food.x && head.y === food.y) {
-                    score += 10;
-                    food = { x: Math.floor(Math.random() * 20) * 20, y: Math.floor(Math.random() * 20) * 20 };
-                } else {
-                    snake.pop();
-                }
-
-                snake.unshift(head);
-            }
-
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            drawRect(food.x, food.y, 'red');
-            snake.forEach(segment => drawRect(segment.x, segment.y, 'lime'));
-        }
-
-        function gameOver() {
-            clearInterval(gameInterval);
-            finalScore.textContent = score;
-            overlay.style.display = 'flex';
-        }
-
-        function saveScore() {
-            const playerName = playerNameInput.value;
-            if (!playerName) {
-                alert('Please enter your name!');
-                return;
-            }
-
-            fetch('/save-score', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ name: playerName, score: score })
-            })
-            .then(response => {
-                if (response.ok) {
-                    alert('Score saved successfully!');
-                    location.reload();
-                } else {
-                    alert('Failed to save score.');
-                }
-            })
-            .catch(err => alert('Error saving score: ' + err));
-        }
-
-        document.addEventListener('keydown', e => {
-            switch (e.key) {
-                case 'ArrowUp':
-                    if (direction.y === 0) direction = { x: 0, y: -1 };
-                    break;
-                case 'ArrowDown':
-                    if (direction.y === 0) direction = { x: 0, y: 1 };
-                    break;
-                case 'ArrowLeft':
-                    if (direction.x === 0) direction = { x: -1, y: 0 };
-                    break;
-                case 'ArrowRight':
-                    if (direction.x === 0) direction = { x: 1, y: 0 };
-                    break;
-            }
+      try {
+        const response = await fetch('/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username: usernameInput, password: passwordInput })
         });
 
-        const gameInterval = setInterval(gameLoop, 100);
-    </script>
-</div>
-<div class="scores">
-    <h2>Top Scores</h2>
-    <table id="scoresTable">
-        <thead>
-            <tr>
-                <th onclick="sortTable(0)">Name</th>
-                <th onclick="sortTable(1)">Score</th>
-            </tr>
-        </thead>
-        <tbody>
-            <!-- Scores will be inserted here -->
-        </tbody>
-    </table>
-    <button onclick="refreshScores()">Refresh Scores</button>
-</div>
-
-<script>
-    async function refreshScores() {
-        try {
-            const response = await fetch('/scores');
-            const scores = await response.json();
-
-            const tableBody = document.getElementById('scoresTable').querySelector('tbody');
-            tableBody.innerHTML = '';
-
-            scores.forEach(score => {
-                const row = document.createElement('tr');
-                row.innerHTML = `<td>${score.name}</td><td>${score.score}</td>`;
-                tableBody.appendChild(row);
-            });
-        } catch (error) {
-            console.error('Error fetching scores:', error);
+        const data = await response.json();
+        if (response.ok) {
+          alert(data.message);
+          username = usernameInput;
+          document.getElementById('authContainer').style.display = 'none';
+          document.getElementById('gameContainer').style.display = 'block';
+          refreshScores();
+          startGame();
+        } else {
+          alert(data.error);
         }
+      } catch (error) {
+        alert('Error logging in: ' + error.message);
+      }
     }
 
-    // Load scores on page load
-    refreshScores();
-</script>
+    async function register() {
+      const usernameInput = document.getElementById('registerUsername').value;
+      const passwordInput = document.getElementById('registerPassword').value;
 
+      if (!usernameInput || !passwordInput) {
+        alert('Please fill in all fields.');
+        return;
+      }
 
-<script src="/socket.io/socket.io.js"></script>
-<script>
-    const socket = io();
+      try {
+        const response = await fetch('/register', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username: usernameInput, password: passwordInput })
+        });
 
-    // Chat logic
-    const messagesDiv = document.getElementById('messages');
-    const chatInput = document.getElementById('chatInput');
-    const sendButton = document.getElementById('sendButton');
-    const nickInput = document.getElementById('nick');
-
-    // Send a message
-    sendButton.addEventListener('click', () => {
-        const message = chatInput.value;
-        const nick = nickInput.value || 'Anonymous';
-        if (message) {
-            socket.emit('chat message', { nick, message });
-            chatInput.value = '';
+        const data = await response.json();
+        if (response.ok) {
+          alert(data.message);
+          toggleAuthForm('loginForm');
+        } else {
+          alert(data.error);
         }
-    });
-
-    // Receive a message
-    socket.on('chat message', ({ nick, message }) => {
-        const msgElement = document.createElement('p');
-        msgElement.textContent = `${nick}: ${message}`;
-        messagesDiv.appendChild(msgElement);
-    });
-
-    // Scores functionality
-    async function refreshScores() {
-        try {
-            const response = await fetch('/scores');
-            const scores = await response.json();
-
-            const tableBody = document.getElementById('scoresTable').querySelector('tbody');
-            tableBody.innerHTML = '';
-
-            scores.forEach(score => {
-                const row = document.createElement('tr');
-                row.innerHTML = `<td>${score.name}</td><td>${score.score}</td>`;
-                tableBody.appendChild(row);
-            });
-        } catch (error) {
-            console.error('Error fetching scores:', error);
-        }
+      } catch (error) {
+        alert('Error registering: ' + error.message);
+      }
     }
 
-    // Load scores on page load
-    refreshScores();
+    function toggleAuthForm(formId) {
+      document.getElementById('loginForm').style.display = formId === 'loginForm' ? 'block' : 'none';
+      document.getElementById('registerForm').style.display = formId === 'registerForm' ? 'block' : 'none';
+    }
 
-    function sortTable(columnIndex) {
-            const table = document.getElementById("scoresTable");
-            let rows, switching, i, x, y, shouldSwitch, direction, switchcount = 0;
-            switching = true;
-            direction = "asc"; 
+    function startGame() {
+      const canvas = document.getElementById('game');
+      const ctx = canvas.getContext('2d');
+      let snake = [{ x: 200, y: 200 }];
+      let direction = { x: 0, y: 0 };
+      let food = { x: Math.floor(Math.random() * 20) * 20, y: Math.floor(Math.random() * 20) * 20 };
+      let score = 0;
 
-            while (switching) {
-                switching = false;
-                rows = table.rows;
-                for (i = 1; i < (rows.length - 1); i++) {
-                    shouldSwitch = false;
-                    x = rows[i].getElementsByTagName("TD")[columnIndex];
-                    y = rows[i + 1].getElementsByTagName("TD")[columnIndex];
-                    if (direction === "asc") {
-                        if (x.innerHTML.toLowerCase() > y.innerHTML.toLowerCase()) {
-                            shouldSwitch = true;
-                            break;
-                        }
-                    } else if (direction === "desc") {
-                        if (x.innerHTML.toLowerCase() < y.innerHTML.toLowerCase()) {
-                            shouldSwitch = true;
-                            break;
-                        }
-                    }
-                }
-                if (shouldSwitch) {
-                    rows[i].parentNode.insertBefore(rows[i + 1], rows[i]);
-                    switching = true;
-                    switchcount ++; 
-                } else {
-                    if (switchcount === 0 && direction === "asc") {
-                        direction = "desc";
-                        switching = true;
-                    }
-                }
-            }
+      function drawRect(x, y, color) {
+        ctx.fillStyle = color;
+        ctx.fillRect(x, y, 20, 20);
+      }
+
+      function gameLoop() {
+        if (direction.x !== 0 || direction.y !== 0) {
+          const head = { x: snake[0].x + direction.x * 20, y: snake[0].y + direction.y * 20 };
+
+          // Check collisions
+          if (
+            head.x < 0 ||
+            head.x >= canvas.width ||
+            head.y < 0 ||
+            head.y >= canvas.height ||
+            snake.some((segment) => segment.x === head.x && segment.y === head.y)
+          ) {
+            gameOver();
+            return;
+          }
+
+          // Check food collision
+          if (head.x === food.x && head.y === food.y) {
+            score += 10;
+            food = {
+              x: Math.floor(Math.random() * 20) * 20,
+              y: Math.floor(Math.random() * 20) * 20
+            };
+          } else {
+            snake.pop();
+          }
+
+          snake.unshift(head);
         }
-    </script>
+
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        drawRect(food.x, food.y, 'red');
+        snake.forEach((segment) => drawRect(segment.x, segment.y, 'lime'));
+      }
+
+      function gameOver() {
+        clearInterval(gameInterval);
+        document.getElementById('finalScore').textContent = score;
+        document.getElementById('gameOverOverlay').style.display = 'flex';
+        saveScore(score); 
+      }
+
+      async function saveScore(score) {
+        try {
+          const response = await fetch('/save-score', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({ score })
+          });
+
+          const data = await response.json();
+          if (response.ok) {
+            console.log('Score saved successfully:', data);
+            refreshScores();
+          } else {
+            console.error('Error saving score:', data.error);
+          }
+        } catch (error) {
+          console.error('Error saving score:', error);
+        }
+      }
+
+      document.addEventListener('keydown', (e) => {
+        switch (e.key) {
+          case 'ArrowUp':
+            if (direction.y === 0) direction = { x: 0, y: -1 };
+            break;
+          case 'ArrowDown':
+            if (direction.y === 0) direction = { x: 0, y: 1 };
+            break;
+          case 'ArrowLeft':
+            if (direction.x === 0) direction = { x: -1, y: 0 };
+            break;
+          case 'ArrowRight':
+            if (direction.x === 0) direction = { x: 1, y: 0 };
+            break;
+        }
+      });
+
+      const gameInterval = setInterval(gameLoop, 100);
+    }
+
+    async function refreshScores() {
+      try {
+        const response = await fetch('/scores');
+        const scores = await response.json();
+
+        const tableBody = document
+          .getElementById('scoresTable')
+          .querySelector('tbody');
+        tableBody.innerHTML = '';
+
+        scores.forEach((score) => {
+          const row = document.createElement('tr');
+          row.innerHTML = `<td>${score.name}</td><td>${score.score}</td>`;
+          tableBody.appendChild(row);
+        });
+      } catch (error) {
+        console.error('Error fetching scores:', error);
+      }
+    }
+
+    socket.on('chat message', (data) => {
+  console.log('Odebrano na kliencie:', data); 
+  // data może wyglądać np. { nick: 'Adam', message: 'Cześć' } 
+  // albo { nick: 'Adam', message: { text: 'Cześć', date: '...' } }
+
+  const { nick, message } = data;
+  const messagesDiv = document.getElementById('messages');
+  const msgElement = document.createElement('p');
+
+  // Jeżeli message okaże się obiektem, możesz np. go sformatować na JSON:
+  if (typeof message.message === 'object') {
+    msgElement.textContent = `${nick}: ${JSON.stringify(message)}`;
+  } else {
+    msgElement.textContent = `${nick}: ${message.message}`;
+  }
+
+  messagesDiv.appendChild(msgElement);
+});
+
+
+    document.getElementById('sendButton').addEventListener('click', () => {
+  const chatInput = document.getElementById('chatInput');
+  const message = chatInput.value; // <-- tutaj powinna być czysta wartość tekstowa
+
+  if (message) {
+    // Wysyłasz obiekt { nick, message },
+    // ale sam message powinien być stringiem:
+    socket.emit('chat message', { nick: username, message });
+    chatInput.value = '';
+  }
+});
+
+
+    checkLogin();
+  </script>
 </body>
 </html>
