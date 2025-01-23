@@ -132,7 +132,6 @@
 </head>
 <body>
   <div class="container">
-    <!-- Login and Registration Section -->
     <div id="authContainer">
       <div id="loginForm" class="auth-form">
         <h2>Login</h2>
@@ -177,6 +176,7 @@
             <div id="messages"></div>
             <input type="text" id="chatInput" placeholder="Type a message" />
             <button id="sendButton">Send</button>
+            <button onclick="Logout()">Logout</button>
           </div>
         </div>
 
@@ -208,6 +208,24 @@
     const socket = io();
     let username = '';
 
+    async function Logout() {
+            const response = await fetch('/logout', {
+                method: 'POST',
+                credentials: 'include', // To include cookies in the request
+            })
+            .then(response => {
+                if (response.ok) {
+                    alert('Logged out successfully!');
+                    window.location.reload(); // Reload the page after logout
+                } else {
+                    alert('Failed to logout. Please try again.');
+                }
+            })
+            .catch(error => {
+                console.error('Error during logout:', error);
+                alert('An error occurred. Please try again.');
+            });
+    }
     async function checkLogin() {
       try {
         const response = await fetch('/check-login', { method: 'GET', credentials: 'include' });
@@ -251,6 +269,7 @@
           document.getElementById('gameContainer').style.display = 'block';
           refreshScores();
           startGame();
+          location.reload()
         } else {
           alert(data.error);
         }
@@ -410,8 +429,6 @@
 
     socket.on('chat message', (data) => {
   console.log('Odebrano na kliencie:', data); 
-  // data może wyglądać np. { nick: 'Adam', message: 'Cześć' } 
-  // albo { nick: 'Adam', message: { text: 'Cześć', date: '...' } }
 
   const { nick, message } = data;
   const messagesDiv = document.getElementById('messages');
@@ -430,11 +447,9 @@
 
     document.getElementById('sendButton').addEventListener('click', () => {
   const chatInput = document.getElementById('chatInput');
-  const message = chatInput.value; // <-- tutaj powinna być czysta wartość tekstowa
+  const message = chatInput.value; 
 
   if (message) {
-    // Wysyłasz obiekt { nick, message },
-    // ale sam message powinien być stringiem:
     socket.emit('chat message', { nick: username, message });
     chatInput.value = '';
   }
